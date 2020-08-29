@@ -170,21 +170,27 @@ inspect(positive_rules)
 
 #k-means
 set.seed(10)
-kmeans1 <- kmeans(headline_tdm_df[,-c(1,2)], 2)
-kmeans2 <- kmeans(headline_tdm_df[,-c(1,2)], 4)
-kmeans3 <- kmeans(headline_tdm_df[,-c(1,2)], 8)
-kmeans4 <- kmeans(headline_tdm_df[,-c(1,2)], 16)
-kmeans5 <- kmeans(headline_tdm_df[,-c(1,2)], 32)
+kmeans1 <- kmeans(headline_tdm_df[,-c(1)], 2)
+kmeans2 <- kmeans(headline_tdm_df[,-c(1)], 4)
+kmeans3 <- kmeans(headline_tdm_df[,-c(1)], 8)
+kmeans4 <- kmeans(headline_tdm_df[,-c(1)], 16)
+kmeans5 <- kmeans(headline_tdm_df[,-c(1)], 32)
+kmeans6 <- kmeans(headline_tdm_df[,-c(1)], 64)
+kmeans7 <- kmeans(headline_tdm_df[,-c(1)], 128)
+kmeans8 <- kmeans(headline_tdm_df[,-c(1)], 256)
 
 kmeans_sse_results <- data.frame(
   kmeans1=kmeans1$tot.withinss,
   kmeans2=kmeans2$tot.withinss,
   kmeans3=kmeans3$tot.withinss,
   kmeans4=kmeans4$tot.withinss,
-  kmeans5=kmeans5$tot.withinss)
-plot(t(kmeans_sse_results),type = "o",xlab = "K number", ylab = "SSE", main="SSE for different K",x=c(2,4,8,16,32))
+  kmeans5=kmeans5$tot.withinss,
+  kmeans6=kmeans6$tot.withinss,
+  kmeans7=kmeans7$tot.withinss,
+  kmeans8=kmeans7$tot.withinss)
+plot(t(kmeans_sse_results),type = "o",xlab = "K number", ylab = "SSE", main="SSE for different K",x=c(2,4,8,16,32,64,128,256))
 
-kmeans_prediction_df <- data.frame(is_sarcastic = headline_tdm_df$is_sarcastic, prediction = kmeans3$cluster)
+kmeans_prediction_df <- data.frame(is_sarcastic = headline_tdm_df$is_sarcastic, prediction = kmeans4$cluster)
 table(kmeans_prediction_df)
 
 ##############################################
@@ -192,10 +198,11 @@ table(kmeans_prediction_df)
 # k-medoid
 #install.library("cluster")
 library(cluster)
-kmedoid1 <- pam(headline_tdm_df[,-c(1,2)], k=2)
-kmedoid2 <- pam(headline_tdm_df[,-c(1,2)], k=4)
-kmedoid3 <- pam(headline_tdm_df[,-c(1,2)], k=8)
-kmedoids_prediction_df <- data.frame(is_sarcastic = headline_tdm_df$is_sarcastic, prediction = kmedoid3$clustering)
+kmedoid1 <- pam(headline_tdm_df[,-c(1)], k=2)
+kmedoid2 <- pam(headline_tdm_df[,-c(1)], k=4)
+kmedoid3 <- pam(headline_tdm_df[,-c(1)], k=8)
+kmedoid4 <- pam(headline_tdm_df[,-c(1)], k=16)
+kmedoids_prediction_df <- data.frame(is_sarcastic = headline_tdm_df$is_sarcastic, prediction = kmedoid4$clustering)
 table(kmedoids_prediction_df)
 
 ##########################################################################################################################################
@@ -371,5 +378,25 @@ accuracy_svm_poly3
 ##########################################################################################################################################
 
 # Naive Bayes
+# running nb on the reduced dimension training and testing sets
+set.seed(17)
+nb_model_1 <- naiveBayes(is_sarcastic ~ ., data=training_set_reduced)
+nb_model_pred_1 <- predict(nb_model_1, testing_set_reduced_no_label, type ="class")
+nb_confusion_matrix_1 <- table(real = testing_set_reduced$is_sarcastic, pred = nb_model_pred_1)
+accuracy_nb_1 <- sum(diag(nb_confusion_matrix_1)) / sum(rowSums(nb_confusion_matrix_1))
+accuracy_nb_1
+# 72.0 %
+
+# quite fast for model build time so will try on the original training and testing sets
+set.seed(17)
+nb_model_2 <- naiveBayes(is_sarcastic ~ ., data=training_set)
+nb_model_pred_2 <- predict(nb_model_2, testing_set_no_label, type ="class")
+nb_confusion_matrix_2 <- table(real = testing_set$is_sarcastic, pred = nb_model_pred_2)
+accuracy_nb_2 <- sum(diag(nb_confusion_matrix_2)) / sum(rowSums(nb_confusion_matrix_2))
+accuracy_nb_2
+# 72.7 %
+
+
+
 
 
