@@ -79,20 +79,26 @@ stopwords("english")[stopwords("english") %in% headline_words]
 document_sizes <- rowSums(headline_tdm_df[,3:ncol(headline_tdm_df)-1])
 summary(document_sizes)
 
+sarcastic_df <- headline_tdm_df[headline_tdm_df$is_sarcastic==1,]
+real_df <- headline_tdm_df[headline_tdm_df$is_sarcastic==0,]
+
+#sentiment eda
 tapply(headline_tdm_df$sentiment_score, headline_tdm_df$is_sarcastic, mean)
 #0           1 
 #0.010063051 0.006948815 
 summary(headline_tdm_df$sentiment_score)
 #Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
 #-18.33333  -1.66410   0.00000   0.08677   1.88982  19.20000 
-ggplot(headline_tdm_df, aes(x=sentiment_score, fill=is_sarcastic)) + geom_histogram()
-
-sarcastic_df <- headline_tdm_df[headline_tdm_df$is_sarcastic==1,]
 ggplot(sarcastic_df, aes(x=sentiment_score)) + geom_histogram(binwidth = 1) + xlim(-20,20) + ggtitle("Sentiment Scores for Sarcastic Headlines")
-
-real_df <- headline_tdm_df[headline_tdm_df$is_sarcastic==0,]
 ggplot(real_df, aes(x=sentiment_score)) + geom_histogram(binwidth = 1) + xlim(-20,20) + ggtitle("Sentiment Scores for Non-Sarcastic Headlines")
-  
+
+# presence of numbers in headline eda
+nrow(sarcastic_df[sarcastic_df$has_numbers == 1,]) / nrow(sarcastic_df)
+# 0.1512924
+nrow(real_df[real_df$has_numbers == 1,]) / nrow(real_df)
+# 0.1523862
+
+# word frequencies
 sort(colSums(sarcastic_df[,-c(1,2,ncol(sarcastic_df))]))[1:20] # least common sarcastic headline words
 sort(colSums(sarcastic_df[,-c(1,2,ncol(sarcastic_df))]),decreasing =TRUE)[1:20] # most common sarcastic headline words
 
@@ -254,12 +260,37 @@ fancyRpartPlot(dt_model_2, caption = NULL)
 
 # Random Forest
 library(randomForest)
+# using default ntree = 500
 rf_model <- randomForest(training_set[,2:ncol(training_set)], training_set$is_sarcastic)
 rf_predict <- predict(rf_model, testing_set_no_label, type = "class")
 rf_confusion_matrix <- table(real = testing_set$is_sarcastic, pred = rf_predict)
 accuracy_rf <- sum(diag(rf_confusion_matrix)) / sum(rowSums(rf_confusion_matrix))
 accuracy_rf 
 # 78.4%
+
+# lowering ntree to 100
+rf_model_2 <- randomForest(training_set[,2:ncol(training_set)], training_set$is_sarcastic, ntree = 100)
+rf_predict_2 <- predict(rf_model_2, testing_set_no_label, type = "class")
+rf_confusion_matrix_2 <- table(real = testing_set$is_sarcastic, pred = rf_predict_2)
+accuracy_rf_2 <- sum(diag(rf_confusion_matrix_2)) / sum(rowSums(rf_confusion_matrix_2))
+accuracy_rf_2 
+# 78.5%
+
+# increasing mtry from default 14 to 28
+rf_model_3 <- randomForest(training_set[,2:ncol(training_set)], training_set$is_sarcastic, ntree = 100, mtry = 28)
+rf_predict_3 <- predict(rf_model_3, testing_set_no_label, type = "class")
+rf_confusion_matrix_3 <- table(real = testing_set$is_sarcastic, pred = rf_predict_3)
+accuracy_rf_3 <- sum(diag(rf_confusion_matrix_3)) / sum(rowSums(rf_confusion_matrix_3))
+accuracy_rf_3 
+# 77.9%
+
+# increasing mtry to 56
+rf_model_4 <- randomForest(training_set[,2:ncol(training_set)], training_set$is_sarcastic, ntree = 100, mtry = 56)
+rf_predict_4 <- predict(rf_model_4, testing_set_no_label, type = "class")
+rf_confusion_matrix_4 <- table(real = testing_set$is_sarcastic, pred = rf_predict_4)
+accuracy_rf_4 <- sum(diag(rf_confusion_matrix_4)) / sum(rowSums(rf_confusion_matrix_4))
+accuracy_rf_4 
+# 77.0%
 
 ##########################################################################################################################################
 
