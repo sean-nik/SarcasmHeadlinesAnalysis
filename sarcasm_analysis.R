@@ -147,14 +147,22 @@ plot(word_rules)
 sarcastic_rules<-apriori(data=headlines_transactions, parameter=list(supp=0.001,conf = 0.8), 
                    appearance = list(default="lhs",rhs="is_sarcastic=1"),
                    control = list(verbose=F))
-sarcastic_rules <-sort(sarcastic_rules, by="confidence", decreasing=TRUE) # sort by confidence in descending order
-inspect(sarcastic_rules[1:25]) # print top 25
+sarcastic_lift_rules <- sort(sarcastic_rules, by="lift", decreasing=TRUE) # sort by lift in descending order
+sarcastic_confidence_rules <-sort(sarcastic_rules, by="confidence", decreasing=TRUE) # sort by confidence in descending order
+sarcastic_support_rules <- sort(sarcastic_rules, by="support", decreasing=TRUE) # sort by support in descending order
+inspect(sarcastic_lift_rules[1:10]) # print top 10 lift
+inspect(sarcastic_confidence_rules[1:10]) # print top 10 confidence
+inspect(sarcastic_support_rules[1:10]) # print top 10 support
 
 non_sarcastic_rules<-apriori(data=headlines_transactions, parameter=list(supp=0.001,conf = 0.8), 
                          appearance = list(default="lhs",rhs="is_sarcastic=0"),
                          control = list(verbose=F))
-non_sarcastic_rules <-sort(non_sarcastic_rules, by="confidence", decreasing=TRUE) # sort by confidence in descending order
-inspect(non_sarcastic_rules[1:25]) # print top 25
+non_sarcastic_lift_rules <- sort(non_sarcastic_rules, by="lift", decreasing=TRUE) # sort by lift in descending order
+non_sarcastic_confidence_rules <-sort(non_sarcastic_rules, by="confidence", decreasing=TRUE) # sort by confidence in descending order
+non_sarcastic_support_rules <- sort(non_sarcastic_rules, by="support", decreasing=TRUE) # sort by support in descending order
+inspect(non_sarcastic_lift_rules[1:10]) # print top 10 lift
+inspect(non_sarcastic_confidence_rules[1:10]) # print top 10 confidence
+inspect(non_sarcastic_support_rules[1:10]) # print top 10 support
 
 word_rules_low_conf <- apriori(headlines_transactions, parameter = list(supp = 0.01, conf = 0.5))
 word_rules_low_conf <-sort(word_rules_low_conf, by="confidence", decreasing=TRUE) # sort by confidence in descending order
@@ -226,10 +234,10 @@ printcp(dt_model_1)
 pruned_model_1 <- prune(dt_model_1, cp = 0.0012907)
 fancyRpartPlot(pruned_model_1, caption = NULL)
 
-dt_1_predictions <- predict(dt_model_1, testing_set, type="class")
+dt_1_predictions <- predict(pruned_model_1, testing_set, type="class")
 dt_1_confusion_matrix <- table(real = testing_set$is_sarcastic, pred = dt_1_predictions)
 accuracy_dt_1 <- sum(diag(dt_1_confusion_matrix)) / sum(rowSums(dt_1_confusion_matrix))
-accuracy_dt_1 # 75.4% 
+accuracy_dt_1 # 74.9% 
 
 min_bucket_options <- c(2,10,20,40)
 for (min_buck in min_bucket_options) {
@@ -255,6 +263,8 @@ dt_2_confusion_matrix <- table(real = testing_set$is_sarcastic, pred = dt_2_pred
 accuracy_dt_2 <- sum(diag(dt_2_confusion_matrix)) / sum(rowSums(dt_2_confusion_matrix))
 accuracy_dt_2 # 75.5%
 fancyRpartPlot(dt_model_2, caption = NULL)
+nrow(dt_model_2$frame) # tree size
+# 107
 
 ##########################################################################################################################################
 
