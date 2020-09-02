@@ -262,6 +262,8 @@ dt_2_predictions <- predict(dt_model_2, testing_set_no_label, type="class")
 dt_2_confusion_matrix <- table(real = testing_set$is_sarcastic, pred = dt_2_predictions)
 accuracy_dt_2 <- sum(diag(dt_2_confusion_matrix)) / sum(rowSums(dt_2_confusion_matrix))
 accuracy_dt_2 # 75.5%
+fourfoldplot(dt_2_confusion_matrix, main = paste("Accuracy: ", round(accuracy_dt_2,3)))
+
 fancyRpartPlot(dt_model_2, caption = NULL)
 nrow(dt_model_2$frame) # tree size
 # 107
@@ -276,6 +278,7 @@ rf_predict <- predict(rf_model, testing_set_no_label, type = "class")
 rf_confusion_matrix <- table(real = testing_set$is_sarcastic, pred = rf_predict)
 accuracy_rf <- sum(diag(rf_confusion_matrix)) / sum(rowSums(rf_confusion_matrix))
 accuracy_rf 
+fourfoldplot(rf_confusion_matrix, main = paste("Accuracy: ", round(accuracy_rf,3)))
 # 78.4%
 
 # lowering ntree to 100
@@ -301,6 +304,19 @@ rf_confusion_matrix_4 <- table(real = testing_set$is_sarcastic, pred = rf_predic
 accuracy_rf_4 <- sum(diag(rf_confusion_matrix_4)) / sum(rowSums(rf_confusion_matrix_4))
 accuracy_rf_4 
 # 77.0%
+
+rf_model$err.rate
+plot(rf_model)
+# green is sarcastic, red is non sarcastic
+rf_model$importance
+
+# MeanDecreaseGini ordered
+rf_important_vars <- data.frame(varname = names(rf_model$importance[order(-rf_model$importance),]), MeanDecreaseGini = rf_model$importance[order(-rf_model$importance),])
+
+ggplot(rf_important_vars[1:50,], aes(x=reorder(varname,MeanDecreaseGini), y=MeanDecreaseGini)) +
+  geom_bar(stat='identity') +
+  xlab("variable name") +
+  coord_flip()
 
 ##########################################################################################################################################
 
@@ -354,6 +370,7 @@ svm_confusion_matrix_lin4 <- table(real = testing_set_reduced$is_sarcastic, pred
 accuracy_svm_lin4 <- sum(diag(svm_confusion_matrix_lin4)) / sum(rowSums(svm_confusion_matrix_lin4))
 accuracy_svm_lin4
 # 75.9 %
+fourfoldplot(svm_confusion_matrix_lin4, main = paste("Accuracy: ", round(accuracy_svm_lin4,3)))
 
 ##############################################
 
@@ -384,6 +401,7 @@ svm_pred_6 <- predict(svm_radial_model_3, testing_set_reduced_no_label, type ="c
 svm_confusion_matrix_6 <- table(real = testing_set_reduced$is_sarcastic, pred = svm_pred_6)
 accuracy_svm_6 <- sum(diag(svm_confusion_matrix_6)) / sum(rowSums(svm_confusion_matrix_6))
 accuracy_svm_6
+
 # 74.9%
 
 ##############################################
@@ -396,6 +414,7 @@ svm_pred_poly1 <- predict(svm_polynomial_model_1, testing_set_reduced_no_label, 
 svm_confusion_matrix_poly1 <- table(real = testing_set_reduced$is_sarcastic, pred = svm_pred_poly1)
 accuracy_svm_poly1 <- sum(diag(svm_confusion_matrix_poly1)) / sum(rowSums(svm_confusion_matrix_poly1))
 accuracy_svm_poly1
+fourfoldplot(svm_confusion_matrix_poly1, main = paste("Accuracy: ", round(accuracy_svm_poly1,3)))
 # 71.4%
 
 # cost = 0.1
@@ -405,6 +424,7 @@ svm_pred_poly2 <- predict(svm_polynomial_model_2, testing_set_reduced_no_label, 
 svm_confusion_matrix_poly2 <- table(real = testing_set_reduced$is_sarcastic, pred = svm_pred_poly2)
 accuracy_svm_poly2 <- sum(diag(svm_confusion_matrix_poly2)) / sum(rowSums(svm_confusion_matrix_poly2))
 accuracy_svm_poly2
+fourfoldplot(svm_confusion_matrix_poly2, main = paste("Accuracy: ", round(accuracy_svm_poly2,3)))
 # 65.9%
 
 # cost = 10
@@ -414,7 +434,19 @@ svm_pred_poly3 <- predict(svm_polynomial_model_3, testing_set_reduced_no_label, 
 svm_confusion_matrix_poly3 <- table(real = testing_set_reduced$is_sarcastic, pred = svm_pred_poly3)
 accuracy_svm_poly3 <- sum(diag(svm_confusion_matrix_poly3)) / sum(rowSums(svm_confusion_matrix_poly3))
 accuracy_svm_poly3
+fourfoldplot(svm_confusion_matrix_poly3, main = paste("Accuracy: ", round(accuracy_svm_poly3,3)))
 # 74.0%
+
+
+# Plot all results as scatterplot
+svm_all_results_df <- data.frame(cost = c(0.01, 0.1, 1, 10),
+                                 linear = c(accuracy_svm_lin4, accuracy_svm_2, accuracy_svm_1, accuracy_svm_2),
+                                 radial = c(NA,accuracy_svm_5, accuracy_svm_4, accuracy_svm_5),
+                                 poly3 = c(NA,accuracy_svm_poly2,accuracy_svm_poly1,accuracy_svm_poly3))
+library(reshape2)
+long_svm_all_results <- melt(svm_all_results_df, id.vars = "cost")
+ggplot(long_svm_all_results, aes(cost, value, col=variable)) + 
+  geom_point() + scale_x_log10() + ylab("Accuracy") + ggtitle("SVM Results: Cost vs. Accuracy")
 
 ##########################################################################################################################################
 
@@ -427,6 +459,7 @@ nb_confusion_matrix_1 <- table(real = testing_set_reduced$is_sarcastic, pred = n
 accuracy_nb_1 <- sum(diag(nb_confusion_matrix_1)) / sum(rowSums(nb_confusion_matrix_1))
 accuracy_nb_1
 # 72.0 %
+fourfoldplot(nb_confusion_matrix_1, main = paste("Accuracy: ", round(accuracy_nb_1,3)))
 
 # quite fast for model build time so will try on the original training and testing sets
 set.seed(17)
@@ -437,6 +470,7 @@ accuracy_nb_2 <- sum(diag(nb_confusion_matrix_2)) / sum(rowSums(nb_confusion_mat
 accuracy_nb_2
 # 72.7 %
 
+varImp(nb_model_1)
 
 
 
