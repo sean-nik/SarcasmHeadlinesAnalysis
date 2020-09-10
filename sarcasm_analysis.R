@@ -3,6 +3,7 @@ setwd('/Users/sean/Desktop/Syracuse University/Semester 2/IST707 Data Analytics/
 library(jsonlite)
 library(tm)
 library("wordcloud")
+library(ggplot2)
 
 headline_document <- stream_in(file('Sarcasm_Headlines_Dataset_v2.json'))
 str(headline_document)
@@ -12,6 +13,7 @@ str(headline_document)
 ## Data Preprocessing
 headline_document <- headline_document[,-3] # getting rid of the source URL
 headline_document
+sum(is.na(headline_document))
 
 words.vec <- VectorSource(headline_document$headline)
 words.corpus <- Corpus(words.vec)
@@ -21,7 +23,9 @@ words.corpus <- tm_map(words.corpus, removePunctuation)
 numbers <- ifelse(grepl("\\d", headline_document$headline), 1, 0)
 
 headline_tdm <- DocumentTermMatrix(words.corpus, control = list(removeNumbers = T))
+inspect(headline_tdm)
 headline_tdm <- removeSparseTerms(headline_tdm, .995)
+dim(headline_tdm)
 
 headline_tdm_df <- as.data.frame(as.matrix(headline_tdm))
 headline_tdm_df <- cbind(has_numbers = numbers, headline_tdm_df)
@@ -76,7 +80,8 @@ headline_words <- colnames(headline_tdm_df)
 stopwords("english")[stopwords("english") %in% headline_words]
 # many of these words, especially pronouns may be defining words so we will not remove stopwords
 
-document_sizes <- rowSums(headline_tdm_df[,3:ncol(headline_tdm_df)-1])
+document_sizes <- rowSums(headline_tdm_df[,4:ncol(headline_tdm_df)-1])
+hist(document_sizes, freq=TRUE,breaks = c(2,4,6,8,10,12,25),xlim = range(2:30))
 summary(document_sizes)
 
 sarcastic_df <- headline_tdm_df[headline_tdm_df$is_sarcastic==1,]
@@ -91,6 +96,9 @@ summary(headline_tdm_df$sentiment_score)
 #-18.33333  -1.66410   0.00000   0.08677   1.88982  19.20000 
 ggplot(sarcastic_df, aes(x=sentiment_score)) + geom_histogram(binwidth = 1) + xlim(-20,20) + ggtitle("Sentiment Scores for Sarcastic Headlines")
 ggplot(real_df, aes(x=sentiment_score)) + geom_histogram(binwidth = 1) + xlim(-20,20) + ggtitle("Sentiment Scores for Non-Sarcastic Headlines")
+
+summary(sarcastic_df$sentiment_score)
+summary(real_df$sentiment_score)
 
 # presence of numbers in headline eda
 nrow(sarcastic_df[sarcastic_df$has_numbers == 1,]) / nrow(sarcastic_df)
@@ -126,7 +134,6 @@ wordcloud(words = colnames(real_df[,-c(1,2,ncol(real_df))]), freq = colSums(real
 ##########################################################################################################################################
 
 ##  ARM
-
 library(arules)
 library(arulesViz)
 arm_matrix <- headline_tdm_df
@@ -142,32 +149,40 @@ arules::inspect(head(headlines_transactions,10))
 word_rules <- apriori(headlines_transactions, parameter = list(supp = 0.001, conf = 0.8))
 word_rules <-sort(word_rules, by="confidence", decreasing=TRUE) # sort by confidence in descending order
 inspect(word_rules[1:25]) # print top 25
-plot(word_rules)
+plot(word_rules, engine = "plotly")
 
 sarcastic_rules<-apriori(data=headlines_transactions, parameter=list(supp=0.001,conf = 0.8), 
-                   appearance = list(default="lhs",rhs="is_sarcastic=1"),
-                   control = list(verbose=F))
+                         appearance = list(default="lhs",rhs="is_sarcastic=1"),
+                         control = list(verbose=F))
+plot(sarcastic_rules)
 sarcastic_lift_rules <- sort(sarcastic_rules, by="lift", decreasing=TRUE) # sort by lift in descending order
 sarcastic_confidence_rules <-sort(sarcastic_rules, by="confidence", decreasing=TRUE) # sort by confidence in descending order
 sarcastic_support_rules <- sort(sarcastic_rules, by="support", decreasing=TRUE) # sort by support in descending order
 inspect(sarcastic_lift_rules[1:10]) # print top 10 lift
 inspect(sarcastic_confidence_rules[1:10]) # print top 10 confidence
 inspect(sarcastic_support_rules[1:10]) # print top 10 support
+plot(sarcastic_lift_rules[1:10], method = "graph", engine = "interactive")
+plot(sarcastic_confidence_rules[1:10], method = "graph", engine = "interactive")
+plot(sarcastic_support_rules[1:10], method = "graph", engine = "interactive")
 
 non_sarcastic_rules<-apriori(data=headlines_transactions, parameter=list(supp=0.001,conf = 0.8), 
-                         appearance = list(default="lhs",rhs="is_sarcastic=0"),
-                         control = list(verbose=F))
+                             appearance = list(default="lhs",rhs="is_sarcastic=0"),
+                             control = list(verbose=F))
 non_sarcastic_lift_rules <- sort(non_sarcastic_rules, by="lift", decreasing=TRUE) # sort by lift in descending order
 non_sarcastic_confidence_rules <-sort(non_sarcastic_rules, by="confidence", decreasing=TRUE) # sort by confidence in descending order
 non_sarcastic_support_rules <- sort(non_sarcastic_rules, by="support", decreasing=TRUE) # sort by support in descending order
 inspect(non_sarcastic_lift_rules[1:10]) # print top 10 lift
 inspect(non_sarcastic_confidence_rules[1:10]) # print top 10 confidence
 inspect(non_sarcastic_support_rules[1:10]) # print top 10 support
+plot(non_sarcastic_lift_rules[1:10], method = "graph", engine = "interactive")
+plot(non_sarcastic_confidence_rules[1:10], method = "graph", engine = "interactive")
+plot(non_sarcastic_support_rules[1:10], method = "graph", engine = "interactive")
 
 word_rules_low_conf <- apriori(headlines_transactions, parameter = list(supp = 0.01, conf = 0.5))
 word_rules_low_conf <-sort(word_rules_low_conf, by="confidence", decreasing=TRUE) # sort by confidence in descending order
 trump_rules <- subset(word_rules_low_conf, lhs %in% c("trump", "trumps", "donald"))
 inspect(trump_rules[1:20])
+plot(trump_rules[1:25], method = "graph")
 
 trump_nonsarcastic_rules <- subset(non_sarcastic_rules, lhs %in% c("trump", "trumps", "donald"))
 inspect(trump_nonsarcastic_rules[1:25])
@@ -177,6 +192,7 @@ inspect(negative_rules)
 
 positive_rules <- subset(word_rules_low_conf, lhs %in% c("sentiment_score=v.positive"))
 inspect(positive_rules)
+
 
 ##########################################################################################################################################
 
@@ -238,6 +254,8 @@ dt_1_predictions <- predict(pruned_model_1, testing_set, type="class")
 dt_1_confusion_matrix <- table(real = testing_set$is_sarcastic, pred = dt_1_predictions)
 accuracy_dt_1 <- sum(diag(dt_1_confusion_matrix)) / sum(rowSums(dt_1_confusion_matrix))
 accuracy_dt_1 # 74.9% 
+nrow(pruned_model_1$frame) # tree size = 61
+fourfoldplot(dt_1_confusion_matrix, main = paste("Accuracy: ", round(accuracy_dt_1,3)))
 
 min_bucket_options <- c(2,10,20,40)
 for (min_buck in min_bucket_options) {
@@ -287,6 +305,7 @@ rf_predict_2 <- predict(rf_model_2, testing_set_no_label, type = "class")
 rf_confusion_matrix_2 <- table(real = testing_set$is_sarcastic, pred = rf_predict_2)
 accuracy_rf_2 <- sum(diag(rf_confusion_matrix_2)) / sum(rowSums(rf_confusion_matrix_2))
 accuracy_rf_2 
+fourfoldplot(rf_confusion_matrix_2, main = paste("Accuracy: ", round(accuracy_rf_2,3)))
 # 78.5%
 
 # increasing mtry from default 14 to 28
@@ -383,6 +402,7 @@ svm_pred_4 <- predict(svm_radial_model_1, testing_set_reduced_no_label, type ="c
 svm_confusion_matrix_4 <- table(real = testing_set_reduced$is_sarcastic, pred = svm_pred_4)
 accuracy_svm_4 <- sum(diag(svm_confusion_matrix_4)) / sum(rowSums(svm_confusion_matrix_4))
 accuracy_svm_4
+fourfoldplot(svm_confusion_matrix_4, main = paste("Accuracy: ", round(accuracy_svm_4,3)))
 # 75.5%
 
 # cost = 0.1
@@ -453,24 +473,41 @@ ggplot(long_svm_all_results, aes(cost, value, col=variable)) +
 # Naive Bayes
 # running nb on the reduced dimension training and testing sets
 set.seed(17)
-nb_model_1 <- naiveBayes(is_sarcastic ~ ., data=training_set_reduced)
+nb_model_1 <- naiveBayes(is_sarcastic ~ ., data=training_set_reduced, )
 nb_model_pred_1 <- predict(nb_model_1, testing_set_reduced_no_label, type ="class")
 nb_confusion_matrix_1 <- table(real = testing_set_reduced$is_sarcastic, pred = nb_model_pred_1)
 accuracy_nb_1 <- sum(diag(nb_confusion_matrix_1)) / sum(rowSums(nb_confusion_matrix_1))
 accuracy_nb_1
 # 72.0 %
-fourfoldplot(nb_confusion_matrix_1, main = paste("Accuracy: ", round(accuracy_nb_1,3)))
 
-# quite fast for model build time so will try on the original training and testing sets
-set.seed(17)
-nb_model_2 <- naiveBayes(is_sarcastic ~ ., data=training_set)
+varImp(nb_model_1)
+
+# model run time was relatively quick therefore full non-reduced training and testing sets were used
+# laplace was attempted for laplace number of default 0, 1, and 10, all giving the same accuracy
+nb_model_2 <- naiveBayes(is_sarcastic ~ ., data=training_set, laplace = 10)
 nb_model_pred_2 <- predict(nb_model_2, testing_set_no_label, type ="class")
 nb_confusion_matrix_2 <- table(real = testing_set$is_sarcastic, pred = nb_model_pred_2)
+nb_confusion_matrix_2
 accuracy_nb_2 <- sum(diag(nb_confusion_matrix_2)) / sum(rowSums(nb_confusion_matrix_2))
 accuracy_nb_2
 # 72.7 %
 
-varImp(nb_model_1)
+# alternative naivebayes package used to verify results and generate plots
+#install.packages("naivebayes")
+library(naivebayes)
+nb3<- naive_bayes(is_sarcastic ~ ., data=training_set)
+summary(nb3)
+nb3pred<- predict(nb3, testing_set_no_label, type = "class")
+nb3matrix<- table(real = testing_set$is_sarcastic, pred = nb3pred)
+nb3matrix
+accuracy_nb3 <- sum(diag(nb3matrix)) / sum(rowSums(nb3matrix))
+accuracy_nb3
+# 72.7%
+plot(nb3, legend.box = TRUE)
+
+table(NB_prediction,RiskDF_Test_justLabel)
+fourfoldplot(nb3matrix, main = paste("Accuracy: ", round(accuracy_nb3,3)))
+plot(NB_object, legend.box = TRUE)
 
 
 
