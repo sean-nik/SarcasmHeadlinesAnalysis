@@ -473,7 +473,7 @@ ggplot(long_svm_all_results, aes(cost, value, col=variable)) +
 # Naive Bayes
 # running nb on the reduced dimension training and testing sets
 set.seed(17)
-nb_model_1 <- naiveBayes(is_sarcastic ~ ., data=training_set_reduced, )
+nb_model_1 <- naiveBayes(is_sarcastic ~ ., data=training_set_reduced )
 nb_model_pred_1 <- predict(nb_model_1, testing_set_reduced_no_label, type ="class")
 nb_confusion_matrix_1 <- table(real = testing_set_reduced$is_sarcastic, pred = nb_model_pred_1)
 accuracy_nb_1 <- sum(diag(nb_confusion_matrix_1)) / sum(rowSums(nb_confusion_matrix_1))
